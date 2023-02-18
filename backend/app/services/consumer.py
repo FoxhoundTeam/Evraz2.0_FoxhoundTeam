@@ -56,12 +56,13 @@ class Consumer:
             "Making prediction for {prediction_type}",
             prediction_type=prediction_type,
         )
+        loop = asyncio.get_event_loop()
         if prediction_type == PredictionType.linear:
-            self.predictor.fit_linear(n_days=10)
-            prediction = self.predictor.predict_linear()
+            await loop.run_in_executor(None, self.predictor.fit_linear, 10)
+            prediction = await loop.run_in_executor(None, self.predictor.predict_linear)
         else:
-            self.predictor.fit_halt_winters(n_days=10)
-            prediction = self.predictor.predict_hw()
+            await loop.run_in_executor(None, self.predictor.fit_halt_winters, 10)
+            prediction = await loop.run_in_executor(None, self.predictor.predict_hw)
         for bearing_num, (
             expires_days,
             expires_error_days,

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.database import Prediction
+from app.database.prediction import PredictionType
 from app.services.prediction import PredictionService
 
 router = APIRouter(
@@ -27,8 +28,9 @@ async def get_predictions(
     response_model_by_alias=False,
     description="Получить прогноз для определенного подшипника",
 )
-async def get_latest_message(
+async def get_prediction(
     bearing_num: int,
+    prediction_type: PredictionType = PredictionType.linear,
     prediction_service: PredictionService = Depends(),
 ):
-    return await prediction_service.get(bearing_num)
+    return await prediction_service.get(bearing_num, prediction_type)
