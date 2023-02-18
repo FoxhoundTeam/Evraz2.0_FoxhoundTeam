@@ -217,7 +217,8 @@ class Predictor:
                 err = np.sqrt( (pred  / self.linear_coef[i][key][0] \
                     * self.linear_coef_std[i][key][0])**2 + (self.linear_coef_std[i][key][1] / self.linear_coef[i][key][0])**2)
 
-                if (i not in res.keys()) or res[i][0] >= pred:
+                if ((i not in res.keys()) or res[i][0] >= pred) \
+                    and pred > (self.t[-1]-1):
                     res[i] = (pred, err, key)
 
         return res
