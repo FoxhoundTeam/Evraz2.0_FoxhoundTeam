@@ -11,14 +11,29 @@ VIBR_HOR = [
     'SM_Exgauster\\[2:6]', 'SM_Exgauster\\[2:9]'
 ]
 
+VIBR_HOR_WARN = [
+    'SM_Exgauster\\[2:161]', 'SM_Exgauster\\[2:164]',
+    'SM_Exgauster\\[2:167]', 'SM_Exgauster\\[2:170]'
+]
+
 VIBR_VERT = [
     'SM_Exgauster\\[2:0]', 'SM_Exgauster\\[2:3]',
     'SM_Exgauster\\[2:6]', 'SM_Exgauster\\[2:9]'
 ]
 
+VIBR_VERT_WARN = [
+    'SM_Exgauster\\[2:162]', 'SM_Exgauster\\[2:165]',
+    'SM_Exgauster\\[2:168]', 'SM_Exgauster\\[2:171]'
+]
+
 VIBR_AXIS = [
     'SM_Exgauster\\[2:0]', 'SM_Exgauster\\[2:3]',
     'SM_Exgauster\\[2:6]', 'SM_Exgauster\\[2:9]'
+]
+
+VIBR_AXIS_WARN = [
+    'SM_Exgauster\\[2:163]', 'SM_Exgauster\\[2:166]',
+    'SM_Exgauster\\[2:169]', 'SM_Exgauster\\[2:172]'
 ]
 
 BEARINGS_WITH_VIBS = [0, 1, 6, 7]
@@ -40,16 +55,7 @@ class Predictor:
         # storage for values of temperature and vibrations
         self.data_value = [{} for i in range(9)]
 
-        # storage for alarm values of temperature and vibrations 
-        self.data_alarm = [{'Temperature' : 8000.0} for i in range(9)]
-
-        # storage for waning values of temperature and vibrations 
-        self.data_warn = [{'Temperature' : 8000.0} for i in range(9)]
-
-        for i in BEARINGS_WITH_VIBS:
-            for key in ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']:
-                self.data_warn[i][key] = 1
-                self.data_alarm[i][key] = 1
+        self.data_warn = [{} for i in range(9)]
 
         self.linear_coef = [{} for i in range(9)]
         self.linear_coef_std = [{} for i in range(9)]
@@ -59,13 +65,8 @@ class Predictor:
                 self.linear_coef[i][key] = np.array([0, 0])
                 self.linear_coef_std[i][key] = np.array([0, 0])
 
-
-
-    def set_alarm_val(self, key, ind, value):
-        self.data_alarm[ind][key] = value
-
     def set_warn_val(self, key, ind, value):
-        self.data_alarm[ind][key] = value
+        self.data_warn[ind][key] = value
 
     def write_mes(self, mes):
 
@@ -108,6 +109,18 @@ class Predictor:
                 else:
                     self.data_value[i]['Vibration_horizntal'] = [value]
 
+            # add horizontal vibrations warning values
+            for key, i in zip(iter(VIBR_HOR_WARN), [0, 1, 6, 7]):
+
+                value = mes[key]
+                if type(value) != float:
+                    if 'Vibration_horizntal' in self.data_warn[i].keys():
+                        value = self.data_warn[i]['Vibration_horizntal']
+                    else:
+                        value = 10.
+
+                self.data_warn[i]['Vibration_horizntal'] = value
+
             # add vertical vibrations
             for key, i in zip(iter(VIBR_VERT), [0, 1, 6, 7]):
 
@@ -123,7 +136,19 @@ class Predictor:
                 else:
                     self.data_value[i]['Vibration_vertical'] = [value]
 
-            # add horizontal vibrations
+            # add vertical vibrations warning values
+            for key, i in zip(iter(VIBR_VERT_WARN), [0, 1, 6, 7]):
+
+                value = mes[key]
+                if type(value) != float:
+                    if 'Vibration_vertical' in self.data_warn[i].keys():
+                        value = self.data_warn[i]['Vibration_vertical']
+                    else:
+                        value = 10.
+
+                self.data_warn[i]['Vibration_vertical'] = value
+
+            # add axis vibrations
             for key, i in zip(iter(VIBR_AXIS), [0, 1, 6, 7]):
 
                 value = mes[key]
@@ -138,15 +163,36 @@ class Predictor:
                 else:
                     self.data_value[i]['Vibration_axis'] = [value]
 
-    def fit(self):
+            # add axis vibrations warning values
+            for key, i in zip(iter(VIBR_AXIS_WARN), [0, 1, 6, 7]):
+
+                value = mes[key]
+                if type(value) != float:
+                    if 'Vibration_axis' in self.data_warn[i].keys():
+                        value = self.data_warn[i]['Vibration_axis']
+                    else:
+                        value = 10.
+
+                self.data_warn[i]['Vibration_axis'] = value
+
+
+    def fit(self, n_days=np.inf):
         
+        ind_start = 0
+
+        for i in range(len(self.t)):
+            if self.t[i] >= self.t[-1] - n_days:
+                ind_start = i
+                break
+
         for i in BEARINGS_WITH_VIBS:
+
             for key in ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']:
 
                 popt, pcov = curve_fit(
                     linear,
-                    self.t,
-                    self.data_value[i][key])
+                    self.t[ind_start:],
+                    self.data_value[i][key][ind_start:])
 
                 self.linear_coef[i][key] = popt
                 self.linear_coef_std[i][key] = np.sqrt(np.diag(pcov))
@@ -165,7 +211,7 @@ class Predictor:
 
             for key in ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']:
 
-                alarm_value =  self.data_alarm[i][key]
+                alarm_value =  self.data_warn[i][key]
 
                 pred = (alarm_value - self.linear_coef[i][key][1]) / self.linear_coef[i][key][0]
                 err = np.sqrt( (pred  / self.linear_coef[i][key][0] \
