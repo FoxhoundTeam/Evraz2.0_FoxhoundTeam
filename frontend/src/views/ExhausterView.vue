@@ -20,7 +20,7 @@
         <object
             @load="onSvgLoaded"
             id="svgobject"
-            data="exhauster.svg"
+            :data="exhauster_svg"
             type="image/svg+xml"
         ></object>
 
@@ -52,6 +52,7 @@ export default {
             sample_text_label : null,
             svgobject : null,
             data_model : {},
+            exhauster_svg: require("assets/exhauster.svg"),
         }
     },
 

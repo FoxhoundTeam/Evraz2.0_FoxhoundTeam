@@ -1,18 +1,28 @@
 import asyncio
 import json
+from datetime import datetime
 
 from aiokafka import AIOKafkaConsumer, TopicPartition
 from aiokafka.helpers import create_ssl_context
+from dateparser import parse
 from loguru import logger
 
 from app.config import settings
 from app.database import Message
+from app.database.prediction import PredictionType
+from app.predictor import Predictor
 from app.services.message import MessageService
+from app.services.prediction import PredictionService
 
 
 class Consumer:
     kc: AIOKafkaConsumer
     local_task: asyncio.Task
+    message_service: MessageService
+    topic: TopicPartition
+    predictor: Predictor
+    latest_message_dttm: datetime
+    prediction_service: PredictionService
 
     def __init__(self):
         self.kc = AIOKafkaConsumer(
@@ -24,14 +34,57 @@ class Consumer:
             sasl_plain_password=settings.kafka_password,
             ssl_context=create_ssl_context(cafile="CA.pem"),
         )
+        self.message_service = MessageService()
+        self.topic = TopicPartition(settings.kafka_topic, 0)
+        self.predictor = Predictor()
+        self.prediction_service = PredictionService()
 
-    @property
-    def message_service(self) -> MessageService:
-        return MessageService()
+    async def _init_predictor_messages(self):
+        logger.info("Initializing predictor")
+        async for message in self.message_service.get_for_prediction(12):
+            self.predictor.write_mes(message)
+        self.latest_message_dttm = parse(message["moment"])
+        logger.info(
+            "Predictor initialization finished, total rows {rows}",
+            rows=len(self.predictor.t),
+        )
+        await self._make_prediction(PredictionType.linear)
+        await self._make_prediction(PredictionType.halt_winters)
 
-    @property
-    def topic(self) -> TopicPartition:
-        return TopicPartition(settings.kafka_topic, 0)
+    async def _make_prediction(self, prediction_type: PredictionType):
+        logger.info(
+            "Making prediction for {prediction_type}",
+            prediction_type=prediction_type,
+        )
+        if prediction_type == PredictionType.linear:
+            self.predictor.fit_linear(n_days=10)
+            prediction = self.predictor.predict_linear()
+        else:
+            self.predictor.fit_halt_winters(n_days=10)
+            prediction = self.predictor.predict_hw()
+        for bearing_num, (
+            expires_days,
+            expires_error_days,
+            reason,
+        ) in prediction.items():
+            logger.info("Got prediction for {num}", num=bearing_num)
+            await self.prediction_service.update_or_create(
+                bearing_num,
+                expires_days,
+                expires_error_days,
+                reason,
+                prediction_type,
+            )
+        logger.info("Prediction finished")
+
+    async def _add_predictor_message(self, message: Message):
+        dttm = message.dttm.replace(tzinfo=None)
+        if (dttm - self.latest_message_dttm).total_seconds() >= 12 * 60:
+            logger.info("Adds predictor message from {dttm}", dttm=dttm)
+            self.latest_message_dttm = dttm
+            self.predictor.write_mes(message.message)
+            await self._make_prediction(PredictionType.linear)
+            await self._make_prediction(PredictionType.halt_winters)
 
     async def _seek_to_latest(self):
         logger.info("Seeking to latest")
@@ -46,8 +99,8 @@ class Consumer:
         logger.info("Sought to latest")
 
     async def _load_missed(self, batch_size=5_000):
-        logger.info("Loading missed messages")
         await self._seek_to_latest()
+        logger.info("Loading missed messages")
         offsets = await self.kc.end_offsets([self.topic])
         last_offset = offsets[self.topic] - 1
         logger.info(
@@ -74,20 +127,24 @@ class Consumer:
 
     async def _consume(self):
         await self._load_missed()
+        await self._init_predictor_messages()
         logger.info("Starting consuming")
         async for msg in self.kc:
             logger.info(f"Got message {msg.offset}")
-            # TODO make predict here
-            await self.message_service.create(
+            data = json.loads(msg.value.decode("utf-8"))
+            message = await self.message_service.create(
                 msg.offset,
-                json.loads(msg.value.decode("utf-8")),
-                msg.timestamp,
+                data,
+                data["moment"],
             )
+            await self._add_predictor_message(message)
 
     async def _start(self):
         await self.kc.start()
         try:
             await self._consume()
+        except Exception as e:
+            logger.exception("Error in consumer {e}", e=e)
         finally:
             await self.kc.stop()
 

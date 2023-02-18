@@ -89,7 +89,7 @@
                             </v-card>
 
                             <!-- содержимое карточки эксгаустера -->
-                            <v-img src="exhauster_small.svg"></v-img>
+                            <v-img :src="exhauster_small_svg"></v-img>
                             <v-list>
                                 
                             </v-list>
@@ -145,6 +145,8 @@ export default {
                     "name":"Эксгаустер У-176"
                 },
             ],
+
+            exhauster_small_svg: require("assets/exhauster_small.svg"),
 
             // модели агломашин
             machines_models : [

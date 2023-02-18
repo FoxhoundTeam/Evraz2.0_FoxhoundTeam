@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import AsyncIterator
 
 from fastapi import HTTPException, status
 
@@ -29,3 +30,26 @@ class MessageService:
 
     async def batch_create(self, messages: list[Message]):
         await Message.insert_many(messages)
+
+    async def get_for_prediction(
+        self,
+        minute_step: int,
+    ) -> AsyncIterator[dict]:
+        if minute_step < 0 or minute_step > 60:
+            raise ValueError("Invalid minute step")
+        messages = Message.find(
+            Message.dttm >= (datetime.utcnow() - timedelta(days=30))
+        ).aggregate(
+            [
+                {"$addFields": {"extracted_minute": {"$minute": "$dttm"}}},
+                {
+                    "$addFields": {
+                        "minute_mod": {"$mod": ["$extracted_minute", minute_step]}
+                    }
+                },
+                {"$match": {"minute_mod": {"$eq": 0}}},
+                {"$project": {"message": 1}},
+            ]
+        )
+        async for message in messages:
+            yield message["message"]

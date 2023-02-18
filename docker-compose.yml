@@ -24,11 +24,11 @@ services:
     volumes:
       - ./db:/data/db
   
-  # frontend:
-  #   build: 
-  #     dockerfile: ./compose/frontend/Dockerfile
-  #     context: .
-  #   restart: unless-stopped
+  frontend:
+    build: 
+      dockerfile: ./compose/frontend/Dockerfile
+      context: .
+    restart: unless-stopped
 
   nginx:
     build: 
@@ -37,7 +37,7 @@ services:
     restart: unless-stopped
     depends_on:
       - backend
-      # - frontend
+      - frontend
     ports:
       - 127.0.0.1:${HTTP_PORT}:80
     volumes:
