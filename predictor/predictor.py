@@ -17,8 +17,8 @@ VIBR_HOR_WARN = [
 ]
 
 VIBR_VERT = [
-    'SM_Exgauster\\[2:0]', 'SM_Exgauster\\[2:3]',
-    'SM_Exgauster\\[2:6]', 'SM_Exgauster\\[2:9]'
+    'SM_Exgauster\\[2:1]', 'SM_Exgauster\\[2:4]',
+    'SM_Exgauster\\[2:7]', 'SM_Exgauster\\[2:10]'
 ]
 
 VIBR_VERT_WARN = [
@@ -27,8 +27,8 @@ VIBR_VERT_WARN = [
 ]
 
 VIBR_AXIS = [
-    'SM_Exgauster\\[2:0]', 'SM_Exgauster\\[2:3]',
-    'SM_Exgauster\\[2:6]', 'SM_Exgauster\\[2:9]'
+    'SM_Exgauster\\[2:2]', 'SM_Exgauster\\[2:5]',
+    'SM_Exgauster\\[2:8]', 'SM_Exgauster\\[2:11]'
 ]
 
 VIBR_AXIS_WARN = [
