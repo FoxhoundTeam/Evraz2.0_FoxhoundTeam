@@ -3,6 +3,8 @@ import numpy as np
 from datetime import datetime, timedelta
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
+# Global constants for signal mapping
+# ----------------------------------- #
 TEMP = [
     'SM_Exgauster\\[2:{}]'.format(27+i) for i in range(0, 9)
 ]
@@ -36,32 +38,40 @@ VIBR_AXIS_WARN = [
     'SM_Exgauster\\[2:163]', 'SM_Exgauster\\[2:166]',
     'SM_Exgauster\\[2:169]', 'SM_Exgauster\\[2:172]'
 ]
+# ----------------------------------- #
 
+
+# indeces for bearings with given vibration amplitudes
 BEARINGS_WITH_VIBS = [0, 1, 6, 7]
 
 # function for linear trend
 def linear(x, a, b):
     return a * x + b
 
+# class for predictor module
 class Predictor:
     def __init__(self):
 
-        # data structure
-        # 9 different bearings (with provided amplitude)
-        # each bearing parameter is sotred as dict
-
-        # timestamps (stored in seconds relative to 2000.01.01)
+        # timestamps (stored in delta days relative to 2000.01.01)
         self.t = []
         
         # storage for values of temperature and vibrations
+        # index of outter list = index of bearing
+        # dict : key = name of value (Vibrations and temperature),
+        #        value = list of values (in order related to timestamps)
         self.data_value = [{} for i in range(9)]
 
+        # same as above but storage for warning_values
         self.data_warn = [{} for i in range(9)]
 
+        # coeficents for linear_trend
         self.linear_coef = [{} for i in range(9)]
         self.linear_coef_std = [{} for i in range(9)]
 
+        # storage for model class for HW predictors
         self.hw_models = [{} for i in range(9)]
+
+        # storage for coeficents of HW trends
         self.hw_models_trend = [{} for i in range(9)]
         self.hw_models_trend_std = [{} for i in range(9)]
 
@@ -69,10 +79,24 @@ class Predictor:
             for key in ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']:
                 self.linear_coef[i][key] = np.array([0, 0])
                 self.linear_coef_std[i][key] = np.array([0, 0])
+                self.hw_models_trend[i][key] = np.array([0, 0])
+                self.hw_models_std[i][key] = np.array([0, 0])
 
+    # method for manually setting of warning value
+    # ind - index of bearing
+    # key - key of value one from ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']
+    # value - warning value
     def set_warn_val(self, key, ind, value):
         self.data_warn[ind][key] = value
 
+    # method for deleting first timestamp in data
+    def pop_first(self):
+        self.t.pop(0)
+        for i in range(9):
+            for key in self.data_value.keys():
+                self.data_value[key].pop(0)
+
+    # parse method to data in class
     def write_mes(self, mes):
 
         date = mes['moment'].replace('T', ' ')[2:-7]
@@ -181,6 +205,8 @@ class Predictor:
                 self.data_warn[i]['Vibration_axis'] = value
 
 
+    # fit coefficents for linear trends of amplitude
+    # n_days - number of last days to account for
     def fit_linear(self, n_days=np.inf):
         
         ind_start = 0
@@ -202,6 +228,8 @@ class Predictor:
                 self.linear_coef[i][key] = popt
                 self.linear_coef_std[i][key] = np.sqrt(np.diag(pcov))
 
+    # fit HW-models for prediction of amplitude
+    # n_days - number of last days to account for
     def fit_halt_winters(self, n_days=np.inf):
 
         ind_start = 0
@@ -231,12 +259,16 @@ class Predictor:
                 self.hw_models_trend[i][key] = popt
                 self.hw_models_trend_std[i][key] = np.diag(pcov) / 2
 
-    # returns dict
-    # key - number of bearing
-    # values : (pred, err, reason)
-    # pred - predicted time in days from 2022.01.01 00:00
+    # method for predicting break via linear trends
+    # ----
+    # return - dict :
+    #               key - number of bearing
+    #               values : (pred, err, reason)
+    # ----
+    # pred - predicted delta-time in days from 2022.01.01 00:00
     # error - error in prediction in days
     # reason - Vibrations which would likely to cause fault
+    #     one from ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']
     def predict_linear(self):
 
         res = {}
@@ -256,7 +288,10 @@ class Predictor:
                     res[i] = (pred, err, key)
 
         return res
-
+    # method for building Halt-Winters model preditcion for future
+    # i - index of bearing
+    # key - one from ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']
+    # time - time after last observation in days for end-of-point of prediction
     def build_hw(self, i, key, time):
         tmp = np.array(self.t)
         dt = np.mean(tmp[1:-1] - tmp[0:-2])
@@ -269,6 +304,16 @@ class Predictor:
 
         return t_pred, pred - pred[0] + self.data_value[i][key][-1]
 
+    # method for predicting break via Halt-Winters model
+    # ----
+    # return - dict :
+    #               key - number of bearing
+    #               values : (pred, err, reason)
+    # ----
+    # pred - predicted delta-time in days from 2022.01.01 00:00
+    # error - error in prediction in days
+    # reason - Vibrations which would likely to cause fault
+    #     one from ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']
     def predict_hw(self):
 
         res = {}
@@ -289,8 +334,16 @@ class Predictor:
 
         return res
 
+    # function of linear trend
+    # x - time in days
+    # key - one from ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']
+    # ind - index of bearing
     def trend_linear(self, x, key, ind):
         return self.linear_coef[ind][key][0] * x + self.linear_coef[ind][key][1]
 
+    # function of trend of HW model
+    # x - time in days
+    # key - one from ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']
+    # ind - index of bearing
     def trend_hw(self, x, key, ind):
         return self.hw_models_trend[ind][key][0] * x + self.hw_models_trend[ind][key][1]
