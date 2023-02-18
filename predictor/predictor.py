@@ -1,6 +1,7 @@
 from scipy.optimize import curve_fit
 import numpy as np
 from datetime import datetime, timedelta
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
 
 TEMP = [
     'SM_Exgauster\\[2:{}]'.format(27+i) for i in range(0, 9)
@@ -59,6 +60,10 @@ class Predictor:
 
         self.linear_coef = [{} for i in range(9)]
         self.linear_coef_std = [{} for i in range(9)]
+
+        self.hw_models = [{} for i in range(9)]
+        self.hw_models_trend = [{} for i in range(9)]
+        self.hw_models_trend_std = [{} for i in range(9)]
 
         for i in BEARINGS_WITH_VIBS:
             for key in ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']:
@@ -176,7 +181,7 @@ class Predictor:
                 self.data_warn[i]['Vibration_axis'] = value
 
 
-    def fit(self, n_days=np.inf):
+    def fit_linear(self, n_days=np.inf):
         
         ind_start = 0
 
@@ -196,6 +201,35 @@ class Predictor:
 
                 self.linear_coef[i][key] = popt
                 self.linear_coef_std[i][key] = np.sqrt(np.diag(pcov))
+
+    def fit_halt_winters(self, n_days=np.inf):
+
+        ind_start = 0
+
+        tmp = np.array(self.t)
+        dt = np.mean(tmp[1:-1] - tmp[0:-2])
+
+        for i in range(len(self.t)):
+            if self.t[i] >= self.t[-1] - n_days:
+                ind_start = i
+                break
+
+        period = round(2  / dt)
+        N = round(20 / dt)
+
+        for i in BEARINGS_WITH_VIBS:
+
+            for key in ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']:
+                x = self.data_value[i][key][ind_start:]
+                self.hw_models[i][key] = ExponentialSmoothing(x, seasonal_periods=period, trend='add', seasonal='add').fit()
+
+                pred = self.hw_models[i][key].predict(start=len(x), end=len(x)+N)
+                t_pred = self.t[-1] + dt * (np.arange(N+1))
+
+                popt, pcov = curve_fit(linear, t_pred, pred)
+
+                self.hw_models_trend[i][key] = popt
+                self.hw_models_trend_std[i][key] = np.diag(pcov) / 2
 
     # returns dict
     # key - number of bearing
@@ -223,6 +257,40 @@ class Predictor:
 
         return res
 
+    def build_hw(self, i, key, time):
+        tmp = np.array(self.t)
+        dt = np.mean(tmp[1:-1] - tmp[0:-2])
+        N_start = len(self.t)
+        N_end = round(time / dt) + N_start
+
+        t_pred = self.t[-1]+dt* (np.arange(N_end-N_start+1))
+
+        pred = self.hw_models[i][key].predict(start=N_start, end=N_end)
+
+        return t_pred, pred - pred[0] + self.data_value[i][key][-1]
+
+    def predict_hw(self):
+
+        res = {}
+
+        for i in BEARINGS_WITH_VIBS:
+
+            for key in ['Vibration_horizntal', 'Vibration_vertical', 'Vibration_axis']:
+
+                alarm_value =  self.data_warn[i][key]
+
+                pred = (alarm_value - self.hw_models_trend[i][key][1]) / self.hw_models_trend[i][key][0]
+                err = np.sqrt( (pred  / self.hw_models_trend[i][key][0] \
+                    * self.hw_models_trend_std[i][key][0])**2 + (self.hw_models_trend_std[i][key][1] / self.hw_models_trend[i][key][0])**2)
+
+                if ((i not in res.keys()) or res[i][0] >= pred) \
+                    and pred > (self.t[-1]-1):
+                    res[i] = (pred, err, key)
+
+        return res
+
     def trend_linear(self, x, key, ind):
         return self.linear_coef[ind][key][0] * x + self.linear_coef[ind][key][1]
 
+    def trend_hw(self, x, key, ind):
+        return self.hw_models_trend[ind][key][0] * x + self.hw_models_trend[ind][key][1]
