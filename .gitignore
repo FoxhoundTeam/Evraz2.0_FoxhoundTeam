@@ -1,0 +1,10 @@
+.env
+mounts
+db
+.DS_Store
+data
+.venv
+__pycache__
+media
+db.sqlite3
+.ruff_cache
