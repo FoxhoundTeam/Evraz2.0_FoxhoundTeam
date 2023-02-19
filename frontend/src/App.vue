@@ -4,7 +4,7 @@
 
         <!-- логотип -->
         <!-- <v-icon> -->
-            <v-img src="favicon.png" max-width="50"></v-img>
+            <v-img src="@/assets/favicon.png" max-width="50"></v-img>
         <!-- </v-icon> -->
         <!-- <v-divider class="mx-2" vertical></v-divider> -->
         <v-app-bar-title justify-start>

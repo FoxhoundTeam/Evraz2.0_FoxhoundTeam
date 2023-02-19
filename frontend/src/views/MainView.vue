@@ -212,6 +212,10 @@ export default {
 
         goToExhauster() {
             this.$router.push({name: "ExhausterView"})
+        },
+
+        goToPlot() {
+            this.$router.push({name: "PlotView"})
         }
     },
 

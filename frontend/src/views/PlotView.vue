@@ -204,8 +204,8 @@ export default {
                 var series_object = {x:[], y:[], type:"scatter", name:variable_name};
                 console.log("variable_name = ", variable_name,"signal_name = ", signal_name );
                 for(var j = 0; j < this.data_model_array.length; j++){// цикл по оси времени
-                    var x = this.data_model_array[j].Message.moment;
-                    var y = this.data_model_array[j].Message[signal_name];
+                    var x = this.data_model_array[j].message.moment;
+                    var y = this.data_model_array[j].message[signal_name];
                     console.log("x = ", x, "y=", y);
                     series_object.x.push(x);
                     series_object.y.push(y);
@@ -231,7 +231,9 @@ export default {
         //     y: [1, 2, 4, 8, 16] }], {
         //     margin: { t: 0 } }
         //     );
-        fetch('example_kafka.json')
+        const date = new Date()
+        date.setHours(date.getHours() - 1)
+        fetch(`/api/message/?dttm_from=${date.toISOString().split(".")[0]}`)
         .then((response) => {
             return response.json();
         })
