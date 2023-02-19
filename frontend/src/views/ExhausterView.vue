@@ -41,7 +41,8 @@
 </template>
 
 <script>
-// import { SVG, Text } from "@svgdotjs/svg.js"
+import { SVG, Text } from "@svgdotjs/svg.js"
+import exhauster_svg_url from "@/assets/exhauster.svg"
 export default {
     name: 'ExhausterView',
 
@@ -55,7 +56,7 @@ export default {
             sample_text_label : null,
             svgobject : null,
             data_model : {},
-            // exhauster_svg: require("assets/exhauster.svg"),
+            exhauster_svg: exhauster_svg_url
         }
     },
 
@@ -124,22 +125,22 @@ export default {
                 // console.log("label_name = ", label_name);
                 var label_element = this.svgobject.getElementById(label_name);
                 // console.log("label_element = ", label_element);
-                const value = this.data_model.Message[pair[0]]
+                const value = this.data_model[pair[0]]
                 label_element.textContent = value.toFixed(2);
 
                 //TODO убрать
-                this.data_model.Message[pair[0]] += 5.0;
+                // this.data_model[pair[0]] += 5.0;
 
                 // включение или отключение анимации
                 if(pair[2]==null){
                     continue;
                 }
 
-                const value_alarm_max = this.data_model.Message[pair[2]];
-                const value_alarm_min = this.data_model.Message[pair[3]];
-                const value_warning_max = this.data_model.Message[pair[4]];
-                const value_warning_min = this.data_model.Message[pair[5]];
-                // console.log("min max = ", value_alarm_max, value_alarm_min);
+                const value_alarm_max = this.data_model[pair[2]];
+                const value_alarm_min = this.data_model[pair[3]];
+                const value_warning_max = this.data_model[pair[4]];
+                const value_warning_min = this.data_model[pair[5]];
+                console.log("min max = ", value_alarm_max, value_alarm_min);
                 var rect_element = this.svgobject.getElementById("rect_"+pair[1]);
                 var animation = rect_element.getElementsByTagName('animate')[0];
 
@@ -161,16 +162,24 @@ export default {
                 
                 // rect_element.style.fill = "red"; // РАБОТАЕТ
             }
+        },
+
+        fetchLatestMessage() {
+            fetch('/api/message/latest/')
+            .then((response) => {
+                return response.json();
+            })
+            .then((json) => {
+                this.data_model = json.message;
+                // console.log("this.data_model = ", this.data_model);
+            })
+            .then(()=>{
+                // console.log("this.data_model2 = ", this.data_model);
+                this.updateSVG();
+            });
         }
-
-
     },
 
-    created(){
-        console.log("3 this.exhauster_id = ", this.exhauster_id);
-        console.log("3 $route.params.exhauster_id = ", this.$route.params.exhauster_id);
-        console.log("3 props.exhauster_id = ", this.$props.exhauster_id);
-    },
 
     mounted() {
         console.log("1 this.exhauster_id = ", this.exhauster_id);
@@ -178,21 +187,7 @@ export default {
         console.log("1 props.exhauster_id = ", this.$props.exhauster_id);
 
         // const dataObjectFromFile = require('example_kafka.json');
-        fetch('example_kafka.json')
-        .then((response) => {
-            return response.json();
-        })
-        .then((json) => {
-            this.data_model = json[0];
-            // console.log("this.data_model = ", this.data_model);
-        })
-        .then(()=>{
-            // console.log("this.data_model2 = ", this.data_model);
-            // this.updateSVG();
-        });
-
-        
-        
+        this.fetchLatestMessage();
 
         setInterval(()=>{
             // for(var [key, ] of this.data_model.Message){
@@ -200,8 +195,8 @@ export default {
             // }
             // this.xxx += 1;
             // this.sample_text_label.textContent = this.xxx;
-            this.updateSVG();
-        }, 1000);
+            this.fetchLatestMessage();
+        }, 15000);
 
         // this.svg = document.getElementById("svg2106").contentDocument;
         // console.log("svg = ", this.svg);

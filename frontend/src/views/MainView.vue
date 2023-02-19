@@ -210,17 +210,9 @@ export default {
             this.exhausters_models[i]
         },
 
-        goToPlot(i){
-            //TODO номер
-            console.log(i);
-            this.$router.replace({name:"PlotView", params: { exhauster_id: i }});
-        },
-
-        goToExhauster(i){
-            //TODO номер
-            console.log(i);
-            this.$router.replace({name:"ExhausterView", params: { exhauster_id: i }});
-        },
+        goToExhauster() {
+            this.$router.push({name: "ExhausterView"})
+        }
     },
 
     mounted() {},
