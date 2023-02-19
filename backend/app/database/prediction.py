@@ -15,6 +15,7 @@ class Prediction(Document):
     expires_error_days: int
     reason: str
     prediction_type: PredictionType
+    exhauster: int = 0
 
     class Settings:
         name = "predictions"

@@ -23,14 +23,15 @@ async def get_predictions(
 
 
 @router.get(
-    "/{bearing_num}/",
+    "/{exhauster}/{bearing_num}/",
     response_model=Prediction,
     response_model_by_alias=False,
-    description="Получить прогноз для определенного подшипника",
+    description="Получить прогноз для определенного подшипника эксгаустера",
 )
 async def get_prediction(
+    exhauster: int,
     bearing_num: int,
     prediction_type: PredictionType = PredictionType.linear,
     prediction_service: PredictionService = Depends(),
 ):
-    return await prediction_service.get(bearing_num, prediction_type)
+    return await prediction_service.get(bearing_num, prediction_type, exhauster)

@@ -75,6 +75,7 @@ class Consumer:
                 expires_error_days,
                 reason,
                 prediction_type,
+                exhauster=0,
             )
         logger.info("Prediction finished")
 

@@ -89,9 +89,11 @@
                             </v-card>
 
                             <!-- содержимое карточки эксгаустера -->
-                            <v-img src="exhauster_small.svg"></v-img>
+                            <v-img src="@/assets/exhauster_small.svg"></v-img>
                             <v-list>
-                                
+                                <v-list-item v-for="prediction in exhausters_models[exhauster_item].predictions" :key="prediction.bearing_num">
+                                    <p> Подшипник {{prediction.bearing_num}} выйдет из строя {{getDate(prediction.expires_at)}} по причине {{prediction.reason}}. Алгоритм {{prediction.prediction_type}}</p>
+                                </v-list-item>
                             </v-list>
                             <v-btn variant="tonal">
                                 Сообщение в SAP
@@ -121,32 +123,36 @@ export default {
             exhausters_models : [
                 {
                     "id":"0",
-                    "name":"Эксгаустер У-171"
-
+                    "name":"Эксгаустер У-171",
+                    "predictions": [],
                 },
                 {
                     "id":"1",
-                    "name":"Эксгаустер У-172"
+                    "name":"Эксгаустер У-172",
+                    "predictions": [],
                 },
                 {
                     "id":"2",
-                    "name":"Эксгаустер У-173"
+                    "name":"Эксгаустер У-173",
+                    "predictions": [],
                 },
                 {
                     "id":"3",
-                    "name":"Эксгаустер У-174"
+                    "name":"Эксгаустер У-174",
+                    "predictions": [],
                 },
                 {
                     "id":"4",
-                    "name":"Эксгаустер У-175"
+                    "name":"Эксгаустер У-175",
+                    "predictions": [],
                 },
                 {
                     "id":"5",
-                    "name":"Эксгаустер У-176"
+                    "name":"Эксгаустер У-176",
+                    "predictions": [],
                 },
             ],
 
-            // exhauster_small_svg: require("assets/exhauster_small.svg"),
 
             // модели агломашин
             machines_models : [
@@ -166,7 +172,15 @@ export default {
         }
     },
 
+    async beforeMount() {
+        await this.getPrediction();
+    },
+
     methods: {
+        getDate(date_str){
+            return new Date(Date.parse(date_str)).toLocaleString("ru-RU");
+        },
+
         update(){
             // получить кадр json
             // TODO получить по API
@@ -182,6 +196,13 @@ export default {
             // заполнить модели отображения всех эксгаустеров
             for(var i = 0; i < this.exhausters_models.length; i++){
                 this.setup_display_model(i);// 
+            }
+        },
+
+        async getPrediction() {
+            const response = await fetch("/api/prediction/")
+            for (const row of (await response.json())) {
+                this.exhausters_models[row.exhauster].predictions.push(row)
             }
         },
         

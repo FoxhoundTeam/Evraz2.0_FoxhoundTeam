@@ -11,17 +11,24 @@ class PredictionService:
         return await Prediction.all().to_list()
 
     async def _get(
-        self, bearing_num: int, prediction_type: PredictionType
+        self,
+        bearing_num: int,
+        prediction_type: PredictionType,
+        exhauster: int,
     ) -> Prediction | None:
         return await Prediction.find_one(
             Prediction.bearing_num == bearing_num,
             Prediction.prediction_type == prediction_type,
+            Prediction.exhauster == exhauster,
         )
 
     async def get(
-        self, bearing_num: int, prediction_type: PredictionType
+        self,
+        bearing_num: int,
+        prediction_type: PredictionType,
+        exhauster: int,
     ) -> Prediction:
-        prediction = await self._get(bearing_num, prediction_type)
+        prediction = await self._get(bearing_num, prediction_type, exhauster)
         if prediction is None:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -36,8 +43,9 @@ class PredictionService:
         expires_error_days: int,
         reason: str,
         prediction_type: PredictionType,
+        exhauster: int,
     ) -> Prediction:
-        prediction = await self._get(bearing_num, prediction_type)
+        prediction = await self._get(bearing_num, prediction_type, exhauster)
         expires_at = datetime(2022, 1, 1) + timedelta(days=expires_days)
         if prediction is not None:
             prediction.expires_at = expires_at
@@ -51,5 +59,6 @@ class PredictionService:
                 expires_error_days=int(expires_error_days),
                 reason=reason,
                 prediction_type=prediction_type,
+                exhauster=exhauster,
             ).save()
         return prediction
