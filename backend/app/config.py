@@ -4,20 +4,16 @@ from pydantic import BaseSettings, MongoDsn, validator
 
 
 class Settings(BaseSettings):
-    project_name: str
+    project_name: str = "FoxControl"
 
     max_history_delta: int = 2 * 60 * 60  # 2 hours
-
-    jwt_secret: str
-    jwt_algorithm: str = "HS256"
-    jwt_expires_s: int = 60 * 60 * 60
 
     kafka_server: str = "rc1a-b5e65f36lm3an1d5.mdb.yandexcloud.net:9091"
     kafka_topic: str = "zsmk-9433-dev-01"
     kafka_user: str = "9433_reader"
     kafka_password: str
 
-    mongodb_server: str
+    mongodb_server: str = "db"
     mongodb_db: str = "controller"
     database_uri: Optional[MongoDsn] = None
 
