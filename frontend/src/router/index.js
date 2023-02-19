@@ -9,16 +9,19 @@ const routes = [
     path: '/',
     name: 'MainView',
     component: MainView,
+    // props : true,
   },
   {
     path: '/exhauster',
     name: 'ExhausterView',
     component: ExhausterView,
+    props : true,
   },
   {
     path: '/plot',
     name: 'PlotView',
     component: PlotView,
+    // props : true,
   },
 ]
 

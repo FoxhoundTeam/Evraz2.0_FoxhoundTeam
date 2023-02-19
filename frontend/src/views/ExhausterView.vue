@@ -1,7 +1,6 @@
 <template>
 <!-- <v-container style="height: 90vh;"> -->
 <v-row
-    class="mb-6"
     style="width:80%;"
     no-gutters
 >
@@ -20,7 +19,7 @@
         <object
             @load="onSvgLoaded"
             id="svgobject"
-            :data="exhauster_svg"
+            data="exhauster.svg"
             type="image/svg+xml"
         ></object>
 
@@ -42,9 +41,13 @@
 </template>
 
 <script>
-import { SVG, Text } from "@svgdotjs/svg.js"
+// import { SVG, Text } from "@svgdotjs/svg.js"
 export default {
     name: 'ExhausterView',
+
+    props: {
+        exhauster_id:String,
+    },
 
     data() {
         return {
@@ -52,7 +55,7 @@ export default {
             sample_text_label : null,
             svgobject : null,
             data_model : {},
-            exhauster_svg: require("assets/exhauster.svg"),
+            // exhauster_svg: require("assets/exhauster.svg"),
         }
     },
 
@@ -65,6 +68,10 @@ export default {
             // this.sample_text_label = $('#tspan785');
             // console.log("svg_text_label = ", this.sample_text_label);
             // this.sample_text_label.textContent = this.xxx;
+
+            console.log("2 this.exhauster_id = ", this.exhauster_id);
+            console.log("2 $route.params.exhauster_id = ", this.$route.params.exhauster_id);
+            console.log("2 props.exhauster_id = ", this.$props.exhauster_id);
         },
 
         updateSVG(){ // перерисовка SVG при получении очередной телеметрии
@@ -132,7 +139,7 @@ export default {
                 const value_alarm_min = this.data_model.Message[pair[3]];
                 const value_warning_max = this.data_model.Message[pair[4]];
                 const value_warning_min = this.data_model.Message[pair[5]];
-                console.log("min max = ", value_alarm_max, value_alarm_min);
+                // console.log("min max = ", value_alarm_max, value_alarm_min);
                 var rect_element = this.svgobject.getElementById("rect_"+pair[1]);
                 var animation = rect_element.getElementsByTagName('animate')[0];
 
@@ -159,7 +166,16 @@ export default {
 
     },
 
+    created(){
+        console.log("3 this.exhauster_id = ", this.exhauster_id);
+        console.log("3 $route.params.exhauster_id = ", this.$route.params.exhauster_id);
+        console.log("3 props.exhauster_id = ", this.$props.exhauster_id);
+    },
+
     mounted() {
+        console.log("1 this.exhauster_id = ", this.exhauster_id);
+        console.log("1 $route.params.exhauster_id = ", this.$route.params.exhauster_id);
+        console.log("1 props.exhauster_id = ", this.$props.exhauster_id);
 
         // const dataObjectFromFile = require('example_kafka.json');
         fetch('example_kafka.json')

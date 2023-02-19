@@ -89,7 +89,7 @@
                             </v-card>
 
                             <!-- содержимое карточки эксгаустера -->
-                            <v-img :src="exhauster_small_svg"></v-img>
+                            <v-img src="exhauster_small.svg"></v-img>
                             <v-list>
                                 
                             </v-list>
@@ -146,7 +146,7 @@ export default {
                 },
             ],
 
-            exhauster_small_svg: require("assets/exhauster_small.svg"),
+            // exhauster_small_svg: require("assets/exhauster_small.svg"),
 
             // модели агломашин
             machines_models : [
@@ -187,6 +187,18 @@ export default {
         
         setup_display_model(i){ // заполнение модели отображения для одного эксгаустера
             this.exhausters_models[i]
+        },
+
+        goToPlot(i){
+            //TODO номер
+            console.log(i);
+            this.$router.replace({name:"PlotView", params: { exhauster_id: i }});
+        },
+
+        goToExhauster(i){
+            //TODO номер
+            console.log(i);
+            this.$router.replace({name:"ExhausterView", params: { exhauster_id: i }});
         },
     },
 

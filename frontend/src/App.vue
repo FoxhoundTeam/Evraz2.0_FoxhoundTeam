@@ -3,11 +3,11 @@
     <v-app-bar app color="primary" dark clipped-left>
 
         <!-- логотип -->
-        <v-toolbar-side-icon>
-            <v-img></v-img>
-        </v-toolbar-side-icon>
-        <v-divider class="mx-2" vertical></v-divider>
-        <v-app-bar-title class="mt-1">
+        <!-- <v-icon> -->
+            <v-img src="favicon.png" max-width="50"></v-img>
+        <!-- </v-icon> -->
+        <!-- <v-divider class="mx-2" vertical></v-divider> -->
+        <v-app-bar-title justify-start>
             <h2 justify-start>{{ "FoxControl" }}</h2>
         </v-app-bar-title>
         
@@ -34,7 +34,7 @@
                 </div>
                 <v-divider inset vertical class="mx-2"></v-divider>
 
-                <v-btn outlined @click="logout"> Выход </v-btn>
+                <!-- <v-btn outlined @click="logout"> Выход </v-btn> -->
 
             </v-container>
         </div>
